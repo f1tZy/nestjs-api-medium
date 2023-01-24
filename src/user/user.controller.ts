@@ -1,8 +1,12 @@
-import { Body, Controller, Post, UsePipes, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, Get, Post, Req, UsePipes, ValidationPipe } from '@nestjs/common';
 import { UserService } from '@app/user/user.service';
 import { CreateUserDto } from '@app/user/dto/create-user.dto';
 import { UserResponseInterface } from '@app/user/types/user-response.inteface';
 import { LoginUserDto } from '@app/user/dto/login-user.dto';
+import { Request } from 'express';
+import { ExpressRequestInterface } from '@app/types/express-request.interface';
+import { User } from '@app/user/decorators/user.decorator';
+import { UserEntity } from '@app/user/user.entity';
 
 @Controller()
 export class UserController {
@@ -20,6 +24,11 @@ export class UserController {
   async login(@Body('user') loginUserDto: LoginUserDto): Promise<UserResponseInterface> {
     const user = await this.userService.login(loginUserDto);
 
+    return this.userService.buildUserResponse(user);
+  }
+
+  @Get('user')
+  async getCurrentUser(@User() user: UserEntity): Promise<UserResponseInterface> {
     return this.userService.buildUserResponse(user);
   }
 }

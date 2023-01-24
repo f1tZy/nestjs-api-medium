@@ -7,6 +7,7 @@ import { sign } from 'jsonwebtoken';
 import { UserResponseInterface } from '@app/user/types/user-response.inteface';
 import { LoginUserDto } from '@app/user/dto/login-user.dto';
 import { compare } from 'bcrypt';
+import { JWT_SECRET } from '@app/config';
 
 @Injectable()
 export class UserService {
@@ -62,8 +63,12 @@ export class UserService {
         username: user.username,
         email: user.email,
       },
-      'JWT_SECRET',
+      JWT_SECRET,
     );
+  }
+
+  findUserById(id: string): Promise<UserEntity> {
+    return this.userRepository.findOne({ where: { id } });
   }
 
   buildUserResponse(user: UserEntity): UserResponseInterface {
