@@ -88,6 +88,7 @@ export class UserService {
         id: user.id,
         image: user.image,
         token: this.generateJwtToken(user),
+        articles: [],
       },
     };
   }
