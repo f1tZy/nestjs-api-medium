@@ -89,6 +89,7 @@ export class UserService {
         image: user.image,
         token: this.generateJwtToken(user),
         articles: [],
+        favorites: [],
       },
     };
   }

@@ -1,4 +1,4 @@
 import { DataSource } from 'typeorm';
 import { ormOptions } from '@app/db/orm-options';
 
-export default new DataSource(ormOptions);
+export const initializeDataSource = new DataSource(ormOptions).initialize();
