@@ -9,10 +9,7 @@ export const ormOptions: DataSourceOptions = {
   password: '123',
   entities: ['dist/**/*.entity{.ts,.js}', 'src/**/*.entity{.ts,.js}'],
   synchronize: false,
-  migrations: [
-    'dist/db/migrations/**/*{.ts,.js}',
-    'src/db/migrations/**/*{.ts,.js}',
-  ],
+  migrations: ['dist/db/migrations/**/*{.ts,.js}', 'src/db/migrations/**/*{.ts,.js}'],
 };
 
-export default new DataSource(ormOptions);
+export default new DataSource(ormOptions).initialize();
