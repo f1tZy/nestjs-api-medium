@@ -30,7 +30,7 @@ export class ArticleService {
     }
 
     if (query.author) {
-      const author = await this.userRepository.findOne({ where: { username: query.author } });
+      const author = await this.getCurrentUserByName(query.author);
 
       if (!author) {
         throw new HttpException('Author not found', HttpStatus.NOT_FOUND);
@@ -41,6 +41,22 @@ export class ArticleService {
       });
     }
 
+    if (query.favorited) {
+      const user = await this.getCurrentUserByName(query.favorited, ['favorites']);
+
+      if (!user) {
+        throw new HttpException('Favorite user not found', HttpStatus.NOT_FOUND);
+      }
+
+      const articlesIds = user.favorites.map((article) => article.id);
+
+      if (articlesIds.length) {
+        queryBuilder.andWhere('articles.id IN (:...ids)', { ids: articlesIds });
+      } else {
+        queryBuilder.andWhere('0=1');
+      }
+    }
+
     if (query.limit) {
       queryBuilder.limit(query.limit);
     }
@@ -49,10 +65,21 @@ export class ArticleService {
       queryBuilder.offset(query.offset);
     }
 
+    let favoriteIds: string[] = [];
+
+    if (userId) {
+      const currentUser = await this.getCurrentUserById(userId, ['favorites']);
+      favoriteIds = currentUser.favorites.map((article) => article.id);
+    }
+
     const articles = await queryBuilder.getMany();
+    const articlesWithFavorites = articles.map((article) => {
+      return { ...article, favorited: favoriteIds.includes(article.id) };
+    });
+
     const articlesCount = await queryBuilder.getCount();
 
-    return { articles, articlesCount };
+    return { articles: articlesWithFavorites, articlesCount };
   }
 
   async createArticle(user: UserEntity, createArticleDto: PersistArticleDto): Promise<ArticleEntity> {
@@ -90,18 +117,33 @@ export class ArticleService {
   }
 
   async addArticleToFavorite(userId: string, slug: string): Promise<ArticleEntity> {
-    const article = await this.getArticleBySlug(slug);
-    const user = await this.userRepository.findOne({ where: { id: userId }, relations: ['favorites'] });
-    const articleIsFavorites = user.favorites.find((article) => article.slug === slug);
+    const currentArticle = await this.getArticleBySlug(slug);
+    const user = await this.getCurrentUserById(userId, ['favorites']);
+    const articleIsFavorites = user.favorites.find((article) => article.id === currentArticle.id);
 
     if (!articleIsFavorites) {
-      user.favorites.push(article);
-      article.favoritesCount++;
+      user.favorites.push(currentArticle);
+      currentArticle.favoritesCount++;
       await this.userRepository.save(user);
-      await this.articleRepository.save(article);
+      await this.articleRepository.save(currentArticle);
     }
 
-    return article;
+    return currentArticle;
+  }
+
+  async deleteArticleFromFavorite(userId: string, slug: string): Promise<ArticleEntity> {
+    const currentArticle = await this.getArticleBySlug(slug);
+    const user = await this.getCurrentUserById(userId, ['favorites']);
+    const articleFavoriteIndex = user.favorites.findIndex((article) => article.id === currentArticle.id);
+
+    if (articleFavoriteIndex >= 0) {
+      user.favorites.splice(articleFavoriteIndex, 1);
+      currentArticle.favoritesCount--;
+      await this.userRepository.save(user);
+      await this.articleRepository.save(currentArticle);
+    }
+
+    return currentArticle;
   }
 
   async updateArticleBySlug(userId: string, slug: string, updateArticleDto: PersistArticleDto): Promise<ArticleEntity> {
@@ -118,6 +160,14 @@ export class ArticleService {
 
   buildArticleResponse(article: ArticleEntity) {
     return { article };
+  }
+
+  async getCurrentUserById(userId: string, relations?: Array<'favorites'>): Promise<UserEntity> {
+    return await this.userRepository.findOne({ where: { id: userId }, relations });
+  }
+
+  async getCurrentUserByName(userName: string, relations?: Array<'favorites'>): Promise<UserEntity> {
+    return await this.userRepository.findOne({ where: { username: userName }, relations });
   }
 
   private generateArticleSlug(title: string): string {
