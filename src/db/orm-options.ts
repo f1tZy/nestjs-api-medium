@@ -11,3 +11,8 @@ export const ormOptions: DataSourceOptions = {
   synchronize: false,
   migrations: ['dist/db/migrations/**/*{.ts,.js}', 'src/db/migrations/**/*{.ts,.js}'],
 };
+
+export const ormSeedOptions: DataSourceOptions = {
+  ...ormOptions,
+  migrations: ['dist/db/seed/**/*{.ts,.js}', 'src/db/seed/**/*{.ts,.js}'],
+};
