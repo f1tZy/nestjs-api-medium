@@ -8,12 +8,15 @@ import { PersistArticleDto } from '@app/article/dto/persist-article.dto';
 import { initializeDataSource } from '../db/initialize-data-source';
 import { GetArticlesQueryInterface } from '@app/article/types/get-articles-query.interface';
 import { ArticlesResponseInterface } from '@app/article/types/articles-response.interface';
+import { FollowEntity } from '@app/profile/follow.entity';
+import { GetArticlesFeedQueryInterface } from '@app/article/types/get-articles-feed-query.interface';
 
 @Injectable()
 export class ArticleService {
   constructor(
     @InjectRepository(ArticleEntity) private readonly articleRepository: Repository<ArticleEntity>,
     @InjectRepository(UserEntity) private readonly userRepository: Repository<UserEntity>,
+    @InjectRepository(FollowEntity) private readonly followsRepository: Repository<FollowEntity>,
   ) {}
 
   async getAllArticles(userId: string, query: GetArticlesQueryInterface): Promise<ArticlesResponseInterface> {
@@ -80,6 +83,35 @@ export class ArticleService {
     const articlesCount = await queryBuilder.getCount();
 
     return { articles: articlesWithFavorites, articlesCount };
+  }
+
+  async getArticlesFeed(userId: string, query: GetArticlesFeedQueryInterface): Promise<ArticlesResponseInterface> {
+    const followedUsers = await this.followsRepository.find({ where: { followerId: userId } });
+
+    if (!followedUsers.length) {
+      return { articles: [], articlesCount: 0 };
+    }
+
+    const followingUserIds = followedUsers.map((follow) => follow.followingId);
+    const dataSource = await initializeDataSource;
+    const queryBuilder = dataSource
+      .getRepository(ArticleEntity)
+      .createQueryBuilder('articles')
+      .leftJoinAndSelect('articles.author', 'author')
+      .where('articles.authorId IN (:...ids)', { ids: followingUserIds });
+
+    if (query.limit) {
+      queryBuilder.limit(query.limit);
+    }
+
+    if (query.offset) {
+      queryBuilder.offset(query.offset);
+    }
+
+    const articles = await queryBuilder.getMany();
+    const articlesCount = await queryBuilder.getCount();
+
+    return { articles, articlesCount };
   }
 
   async createArticle(user: UserEntity, createArticleDto: PersistArticleDto): Promise<ArticleEntity> {

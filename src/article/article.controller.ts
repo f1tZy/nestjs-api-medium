@@ -19,10 +19,20 @@ import { PersistArticleDto } from '@app/article/dto/persist-article.dto';
 import { ArticleResponseInterface } from '@app/article/types/article-response.interface';
 import { GetArticlesQueryInterface } from '@app/article/types/get-articles-query.interface';
 import { ArticlesResponseInterface } from '@app/article/types/articles-response.interface';
+import { GetArticlesFeedQueryInterface } from '@app/article/types/get-articles-feed-query.interface';
 
 @Controller('articles')
 export class ArticleController {
   constructor(private readonly articleService: ArticleService) {}
+
+  @Get('feed')
+  @UseGuards(AuthGuard)
+  async getArticlesFeed(
+    @User('id') userId: string,
+    @Query() query: GetArticlesFeedQueryInterface,
+  ): Promise<ArticlesResponseInterface> {
+    return await this.articleService.getArticlesFeed(userId, query);
+  }
 
   @Get()
   async getAllArticles(
