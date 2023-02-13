@@ -9,6 +9,7 @@ import { LoginUserDto } from '@app/user/dto/login-user.dto';
 import { compare } from 'bcrypt';
 import { JWT_SECRET } from '@app/config';
 import { UpdateUserDto } from '@app/user/dto/update-user.dto';
+import { CustomError } from '@app/shared/error/custom.error';
 
 @Injectable()
 export class UserService {
@@ -26,8 +27,12 @@ export class UserService {
       username: createUserDto.username,
     });
 
-    if (userByEmail || userByUsername) {
-      throw new HttpException('User already exist', HttpStatus.UNPROCESSABLE_ENTITY);
+    if (userByEmail) {
+      throw new CustomError({ email: 'User already exist' });
+    }
+
+    if (userByUsername) {
+      throw new CustomError({ username: 'User already exist' });
     }
 
     const newUser = new UserEntity();
