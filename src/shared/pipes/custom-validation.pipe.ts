@@ -6,6 +6,11 @@ import { validate } from 'class-validator';
 export class CustomValidationPipe implements PipeTransform {
   async transform(value: any, metadata: ArgumentMetadata) {
     const obj = plainToInstance(metadata.metatype, value);
+
+    if (typeof obj !== 'object') {
+      return value;
+    }
+
     const err = await validate(obj);
 
     if (!err.length) {
